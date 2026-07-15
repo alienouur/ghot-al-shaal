@@ -1,0 +1,424 @@
+/* ============ غوط الشعال: شارعنا — الأنماط ============ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --c-primary: #f5a623;
+    --c-dark: #1a1428;
+    --c-panel: rgba(20, 14, 40, 0.92);
+    --c-accent: #ff5e5e;
+    --c-green: #4caf7d;
+}
+
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0d0a18;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+}
+
+#game-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: block;
+    image-rendering: pixelated;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    direction: rtl;
+    z-index: 60; /* فوق أزرار اللمس */
+}
+#ui-layer > * { pointer-events: auto; }
+#ui-layer #hud { pointer-events: none; }
+
+/* ---------- أزرار اللمس (الهاتف) ---------- */
+#touch-controls {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: none;
+    z-index: 40;
+}
+#touch-controls.visible { display: block; }
+.tc-btn {
+    pointer-events: auto;
+    position: absolute;
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: rgba(30, 22, 60, 0.5);
+    color: #fff;
+    font-size: 17px;
+    font-weight: bold;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+}
+.tc-btn.active { background: rgba(245, 166, 35, 0.6); border-color: #f5a623; }
+/* لوحة الاتجاهات — يسار الشاشة */
+.tc-pad { position: absolute; left: 18px; bottom: 20px; width: 180px; height: 180px; pointer-events: none; }
+.tc-pad .tc-up    { left: 61px; top: 0; }
+.tc-pad .tc-down  { left: 61px; bottom: 0; }
+.tc-pad .tc-left  { left: 0; top: 61px; }
+.tc-pad .tc-right { right: 0; top: 61px; }
+.tc-pad .tc-btn { position: absolute; }
+/* أزرار الأفعال — يمين الشاشة */
+.tc-actions { position: absolute; right: 18px; bottom: 20px; width: 190px; height: 180px; pointer-events: none; }
+.tc-actions .tc-btn { position: absolute; }
+.tc-actions .tc-big { width: 74px; height: 74px; right: 0; bottom: 8px; font-size: 19px; }
+.tc-actions .tc-btn:nth-child(2) { right: 88px; bottom: 0; }   /* ضرب */
+.tc-actions .tc-btn:nth-child(3) { right: 108px; bottom: 72px; } /* قدرة */
+.tc-actions .tc-run { right: 20px; bottom: 96px; }
+.tc-pause { top: 12px; left: 50%; transform: translateX(-50%); width: 46px; height: 46px; font-size: 18px; }
+
+/* تلميح قلب الهاتف عموديًا */
+#rotate-hint { display: none; }
+@media (orientation: portrait) and (pointer: coarse) {
+    #rotate-hint {
+        display: flex;
+        position: fixed; inset: 0;
+        z-index: 999;
+        background: rgba(8, 5, 18, 0.96);
+        color: #f5a623;
+        font-size: 22px;
+        font-weight: bold;
+        align-items: center; justify-content: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 14px;
+    }
+    #rotate-hint::before { content: '📱↻'; font-size: 52px; }
+}
+
+/* شاشات صغيرة: تصغير القوائم والبطاقات */
+@media (max-height: 500px) {
+    .game-title { font-size: 40px !important; }
+    .menu-btn { padding: 8px 26px !important; font-size: 15px !important; }
+    .char-card { width: 150px !important; padding: 8px !important; }
+    .char-card canvas { width: 60px; height: 76px; }
+    .screen { overflow-y: auto; }
+    #dialogue-box { bottom: 8px !important; max-width: 62vw !important; }
+    .hud-player { transform: scale(0.85); transform-origin: top right; }
+}
+
+/* ---------- الأونلاين ---------- */
+.chip-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
+    max-width: 90vw;
+}
+.char-chip {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.25);
+    background: rgba(30,22,60,0.6);
+    color: #fff;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.char-chip.sel { background: var(--c-primary); color: #1a1428; border-color: var(--c-primary); font-weight: bold; }
+.join-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+.room-input {
+    width: 130px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(15,10,30,0.8);
+    color: #fff;
+    font-size: 20px;
+    text-align: center;
+    letter-spacing: 6px;
+    font-family: inherit;
+    outline: none;
+}
+.room-input:focus { border-color: var(--c-primary); }
+.room-code-big {
+    font-size: 44px;
+    font-weight: bold;
+    color: var(--c-primary);
+    letter-spacing: 14px;
+    background: rgba(15,10,30,0.7);
+    border: 2px dashed var(--c-primary);
+    border-radius: 14px;
+    padding: 8px 26px 8px 12px;
+    margin-bottom: 10px;
+}
+.lobby-list { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+.lobby-player {
+    background: rgba(30,22,60,0.7);
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 16px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.menu-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------- الشاشات ---------- */
+.screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.4s ease;
+    color: #fff;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.screen.overlay { background: rgba(8, 5, 18, 0.75); backdrop-filter: blur(3px); }
+
+.game-title {
+    font-size: clamp(36px, 7vw, 72px);
+    font-weight: 900;
+    color: var(--c-primary);
+    text-shadow: 0 4px 0 #8a5a00, 0 8px 24px rgba(0,0,0,0.6);
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+}
+.game-subtitle {
+    font-size: clamp(16px, 2.5vw, 26px);
+    color: #d8cfff;
+    margin-bottom: 40px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+
+/* ---------- الأزرار ---------- */
+.menu-btn {
+    display: block;
+    min-width: 260px;
+    margin: 8px auto;
+    padding: 13px 34px;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: inherit;
+    color: #fff;
+    background: linear-gradient(180deg, #3d2f6e, #251c47);
+    border: 2px solid #6a55b8;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s, background 0.2s;
+    text-align: center;
+}
+.menu-btn:hover, .menu-btn.focused {
+    transform: scale(1.06);
+    background: linear-gradient(180deg, #5a45a0, #37296b);
+    box-shadow: 0 0 18px rgba(140, 110, 255, 0.55);
+    border-color: var(--c-primary);
+}
+.menu-btn:active { transform: scale(0.97); }
+.menu-btn.primary {
+    background: linear-gradient(180deg, #ffb640, #d98200);
+    border-color: #ffd88a;
+    color: #2a1a00;
+}
+.menu-btn.primary:hover { background: linear-gradient(180deg, #ffc95e, #f09000); }
+.menu-btn.small { min-width: 140px; padding: 8px 18px; font-size: 16px; }
+.menu-btn:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
+
+/* ---------- اختيار الشخصية ---------- */
+.char-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+    max-width: 1100px;
+}
+.char-card {
+    width: 180px;
+    background: var(--c-panel);
+    border: 2px solid #4a3d80;
+    border-radius: 14px;
+    padding: 12px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    text-align: center;
+}
+.char-card:hover { transform: translateY(-6px); border-color: #8a70e0; }
+.char-card.selected {
+    border-color: var(--c-primary);
+    box-shadow: 0 0 22px rgba(245, 166, 35, 0.5);
+    transform: translateY(-6px) scale(1.03);
+}
+.char-card.locked { opacity: 0.45; filter: grayscale(0.8); }
+.char-card canvas { width: 96px; height: 120px; margin: 4px auto; display: block; }
+.char-name { font-size: 20px; font-weight: 800; color: var(--c-primary); }
+.char-role { font-size: 13px; color: #bcaee8; margin-bottom: 6px; }
+.char-ability { font-size: 13px; color: #7de8a8; margin-bottom: 8px; min-height: 32px; }
+.stat-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 11px; color: #cfc6f0; }
+.stat-label { width: 42px; text-align: right; }
+.stat-bar { flex: 1; height: 7px; background: #241b45; border-radius: 4px; overflow: hidden; }
+.stat-fill { height: 100%; background: linear-gradient(90deg, #6a55d8, #ad8bff); border-radius: 4px; }
+.player-tag {
+    display: inline-block; padding: 2px 10px; margin-top: 6px;
+    border-radius: 8px; font-size: 12px; font-weight: 700; color: #10082a;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+    position: absolute; inset: 0;
+    padding: 14px 18px;
+    pointer-events: none;
+    display: none;
+}
+#hud.visible { display: block; }
+.hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.hud-player {
+    background: var(--c-panel);
+    border: 1px solid #4a3d80;
+    border-radius: 12px;
+    padding: 8px 14px;
+    min-width: 200px;
+    margin-bottom: 6px;
+}
+.hud-name { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+.hud-health-bar { width: 170px; height: 12px; background: #2a1e4a; border-radius: 6px; overflow: hidden; }
+.hud-health-fill { height: 100%; background: linear-gradient(90deg, #e04545, #ff7a5e); border-radius: 6px; transition: width 0.2s; }
+.hud-ability-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+.hud-ability-icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 900; color: #fff;
+    position: relative; overflow: hidden;
+}
+.hud-cd-bar { flex: 1; height: 7px; background: #2a1e4a; border-radius: 4px; overflow: hidden; max-width: 110px; }
+.hud-cd-fill { height: 100%; background: linear-gradient(90deg, #35c58a, #7dffc0); border-radius: 4px; }
+.hud-center { text-align: center; color: #fff; }
+.hud-score { font-size: 22px; font-weight: 900; color: var(--c-primary); text-shadow: 0 2px 6px #000; }
+.hud-timer { font-size: 30px; font-weight: 900; text-shadow: 0 2px 6px #000; }
+.hud-objective {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--c-panel); border: 1px solid #4a3d80;
+    border-radius: 10px; padding: 7px 20px;
+    font-size: 15px; color: #ffe9be; max-width: 60vw; text-align: center;
+}
+
+/* ---------- الحوار ---------- */
+#dialogue-box {
+    position: absolute;
+    bottom: 30px; left: 50%; transform: translateX(-50%);
+    width: min(720px, 90vw);
+    background: var(--c-panel);
+    border: 2px solid #6a55b8;
+    border-radius: 16px;
+    padding: 16px 22px;
+    color: #fff;
+    display: none;
+    animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+#dialogue-box.visible { display: block; }
+.dlg-speaker { font-size: 17px; font-weight: 800; color: var(--c-primary); margin-bottom: 6px; }
+.dlg-text { font-size: 17px; line-height: 1.6; min-height: 48px; }
+.dlg-hint { font-size: 12px; color: #9a8cc8; text-align: left; margin-top: 6px; }
+
+/* ---------- الإشعارات ---------- */
+#toast-area {
+    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    pointer-events: none;
+}
+.toast {
+    background: var(--c-panel);
+    border: 1px solid var(--c-primary);
+    color: #ffe9be;
+    border-radius: 10px;
+    padding: 10px 26px;
+    font-size: 16px; font-weight: 700;
+    animation: toastIn 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.toast.achievement { border-color: var(--c-green); color: #b8ffd8; }
+@keyframes toastIn { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.toast.out { opacity: 0; transition: opacity 0.4s; }
+
+/* ---------- الإعدادات ---------- */
+.settings-panel {
+    background: var(--c-panel);
+    border: 2px solid #4a3d80;
+    border-radius: 16px;
+    padding: 26px 40px;
+    min-width: 340px;
+}
+.setting-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 14px 0; gap: 24px; font-size: 17px;
+}
+.setting-row input[type="range"] { width: 150px; accent-color: var(--c-primary); }
+.toggle-btn {
+    padding: 5px 18px; border-radius: 8px; border: 1px solid #6a55b8;
+    background: #2a1e4a; color: #fff; cursor: pointer; font-family: inherit; font-size: 15px;
+}
+.toggle-btn.on { background: var(--c-green); border-color: #7dffc0; color: #06281a; font-weight: 700; }
+
+/* ---------- الإنجازات ---------- */
+.ach-list { max-height: 55vh; overflow-y: auto; width: min(520px, 90vw); }
+.ach-item {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--c-panel);
+    border: 1px solid #4a3d80;
+    border-radius: 12px;
+    padding: 12px 18px; margin: 8px 0;
+}
+.ach-item.done { border-color: var(--c-green); }
+.ach-icon { font-size: 28px; width: 40px; text-align: center; }
+.ach-info h4 { font-size: 16px; color: #fff; }
+.ach-item.done .ach-info h4 { color: #7dffc0; }
+.ach-info p { font-size: 13px; color: #9a8cc8; }
+
+/* ---------- عناوين الفصول ---------- */
+#chapter-title {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    background: rgba(5, 3, 12, 0.9);
+    z-index: 50;
+}
+#chapter-title.visible { display: flex; animation: fadeIn 0.8s ease; }
+#chapter-title h2 { font-size: 22px; color: #9a8cc8; margin-bottom: 10px; letter-spacing: 4px; }
+#chapter-title h1 { font-size: clamp(30px, 5vw, 54px); color: var(--c-primary); text-shadow: 0 4px 20px rgba(245,166,35,0.4); }
+
+/* ---------- شاشات النتائج ---------- */
+.result-panel {
+    background: var(--c-panel);
+    border: 2px solid var(--c-primary);
+    border-radius: 20px;
+    padding: 34px 60px;
+    text-align: center;
+}
+.result-panel h1 { font-size: 42px; color: var(--c-primary); margin-bottom: 10px; }
+.result-panel p { font-size: 19px; color: #d8cfff; margin-bottom: 20px; }
+
+/* ---------- التحكم للجوال ---------- */
+.help-table { border-collapse: collapse; margin: 14px auto; color: #d8cfff; font-size: 15px; }
+.help-table td { padding: 5px 16px; border-bottom: 1px solid #35296a; }
+.help-table td:first-child { color: var(--c-primary); font-weight: 700; }
+
+.screen h2.screen-title {
+    font-size: 34px; color: var(--c-primary);
+    margin-bottom: 12px; text-shadow: 0 3px 10px rgba(0,0,0,0.7);
+}
+.screen p.screen-hint { color: #9a8cc8; font-size: 14px; margin-top: 14px; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1a1230; }
+::-webkit-scrollbar-thumb { background: #4a3d80; border-radius: 4px; }

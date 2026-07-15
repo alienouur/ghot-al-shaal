@@ -1,0 +1,15 @@
+{
+  "name": "ghot-al-shaal",
+  "version": "1.0.0",
+  "description": "غوط الشعال: شارعنا — لعبة 2D عربية مع أونلاين بالرومات",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  }
+}
