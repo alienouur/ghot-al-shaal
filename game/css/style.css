@@ -17,11 +17,15 @@ html, body {
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
+    position: fixed;
+    inset: 0;
 }
 
 #game-container {
     position: relative;
-    width: 100vw; height: 100vh;
+    width: 100vw;
+    height: 100vh;    /* متصفحات قديمة */
+    height: 100dvh;   /* الارتفاع المرئي الفعلي على الهواتف */
     overflow: hidden;
 }
 
@@ -69,14 +73,14 @@ html, body {
 }
 .tc-btn.active { background: rgba(245, 166, 35, 0.6); border-color: #f5a623; }
 /* لوحة الاتجاهات — يسار الشاشة */
-.tc-pad { position: absolute; left: 18px; bottom: 20px; width: 180px; height: 180px; pointer-events: none; }
+.tc-pad { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: 180px; height: 180px; pointer-events: none; }
 .tc-pad .tc-up    { left: 61px; top: 0; }
 .tc-pad .tc-down  { left: 61px; bottom: 0; }
 .tc-pad .tc-left  { left: 0; top: 61px; }
 .tc-pad .tc-right { right: 0; top: 61px; }
 .tc-pad .tc-btn { position: absolute; }
 /* أزرار الأفعال — يمين الشاشة */
-.tc-actions { position: absolute; right: 18px; bottom: 20px; width: 190px; height: 180px; pointer-events: none; }
+.tc-actions { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: 190px; height: 180px; pointer-events: none; }
 .tc-actions .tc-btn { position: absolute; }
 .tc-actions .tc-big { width: 74px; height: 74px; right: 0; bottom: 8px; font-size: 19px; }
 .tc-actions .tc-btn:nth-child(2) { right: 88px; bottom: 0; }   /* ضرب */
@@ -103,15 +107,39 @@ html, body {
     #rotate-hint::before { content: '📱↻'; font-size: 52px; }
 }
 
-/* شاشات صغيرة: تصغير القوائم والبطاقات */
+/* شاشات صغيرة: تصغير القوائم والبطاقات مع تمرير عمودي */
+@media (max-height: 700px) {
+    .screen {
+        overflow-y: auto;
+        justify-content: flex-start;
+        padding: 16px 10px calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+    .screen > *:first-child { margin-top: auto; }
+    .screen > *:last-child { margin-bottom: auto; }
+}
 @media (max-height: 500px) {
-    .game-title { font-size: 40px !important; }
-    .menu-btn { padding: 8px 26px !important; font-size: 15px !important; }
-    .char-card { width: 150px !important; padding: 8px !important; }
-    .char-card canvas { width: 60px; height: 76px; }
-    .screen { overflow-y: auto; }
+    .game-title { font-size: 36px !important; margin-bottom: 4px !important; }
+    .game-subtitle { font-size: 15px !important; margin-bottom: 10px !important; }
+    .screen-title { font-size: 22px !important; margin-bottom: 8px !important; }
+    .menu-btn { padding: 7px 24px !important; font-size: 14px !important; margin: 3px 0 !important; }
+    .char-card { width: 138px !important; padding: 7px !important; }
+    .char-card canvas { width: 54px; height: 68px; }
+    .char-ability { font-size: 10px !important; }
+    .stat-row { display: none !important; } /* إخفاء أشرطة الإحصائيات في الشاشات القصيرة */
+    .screen-hint { font-size: 10px !important; }
+    .room-code-big { font-size: 32px !important; letter-spacing: 8px !important; padding: 6px 18px 6px 8px !important; }
     #dialogue-box { bottom: 8px !important; max-width: 62vw !important; }
-    .hud-player { transform: scale(0.85); transform-origin: top right; }
+    .hud-player { transform: scale(0.8); transform-origin: top right; }
+    .result-panel { padding: 12px 20px !important; }
+    .tc-btn { width: 50px; height: 50px; font-size: 15px; }
+    .tc-pad { width: 156px; height: 156px; }
+    .tc-pad .tc-up, .tc-pad .tc-down { left: 53px; }
+    .tc-pad .tc-left, .tc-pad .tc-right { top: 53px; }
+    .tc-actions { width: 170px; height: 156px; }
+    .tc-actions .tc-big { width: 64px; height: 64px; font-size: 16px; }
+    .tc-actions .tc-btn:nth-child(2) { right: 76px; }
+    .tc-actions .tc-btn:nth-child(3) { right: 94px; bottom: 62px; }
+    .tc-actions .tc-run { right: 16px; bottom: 84px; }
 }
 
 /* ---------- الأونلاين ---------- */

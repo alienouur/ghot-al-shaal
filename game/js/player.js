@@ -136,9 +136,9 @@ class Player {
             this.useAbility(game, world);
         }
 
-        // الهجوم
+        // الهجوم (التمويه يزيد الدمج)
         if (input.attack && this.attackAnim <= 0) {
-            this.attack(game, world);
+            this.attack(game, world, cloaked ? 1.6 : 1);
         }
 
         this.hitWall = false;
@@ -161,9 +161,27 @@ class Player {
             }
         }
 
-        // خطوط سرعة أثناء الخطفة
+        // الخطفة: خطوط سرعة + دمج كل اللي يمر عليه
         if (this.char.ability.id === 'khatfa' && this.abilityActive > 0) {
             game.particles.speedLines(this.cx, this.cy, this.facing, this.char.colors.accent);
+            const list = this.dashHitList || (this.dashHitList = []);
+            for (const e of world.enemies) {
+                if (e.alive && !list.includes(e) && Physics.aabb(this, e)) {
+                    list.push(e);
+                    e.takeDamage(this.attackPower * 1.5, this.cx, game);
+                    Physics.knockback(e, this.cx, 500, 300);
+                    game.particles.hit(e.cx, e.cy, '#ff9d3c');
+                }
+            }
+            if (game.otherPlayers) {
+                for (const p of game.otherPlayers(this)) {
+                    if (!list.includes(p) && Physics.aabb(this, p)) {
+                        list.push(p);
+                        p.takeDamage(this.attackPower * 1.5, this.cx, game);
+                        game.particles.hit(p.cx, p.cy, '#ff9d3c');
+                    }
+                }
+            }
         }
 
         // تحديد حالة الرسوم
@@ -188,44 +206,50 @@ class Player {
         Audio2.play('ability_' + ab.id);
 
         switch (ab.id) {
-            case 'nida': // علي: تشتيت الأعداء القريبين
+            case 'nida': // علي: نداء الحشرات — سرب يشتت الأعداء القريبين
                 game.particles.wave(this.cx, this.cy, '#5ec8ff');
                 game.particles.wave(this.cx, this.cy - 20, '#8ad4ff');
                 for (const e of world.enemies) {
                     if (e.alive && Physics.dist(this, e) < 420) {
                         e.distract(ab.duration + 1.5);
+                        // سرب الحشرات يلف على العدو
+                        game.particles.sparkle(e.cx, e.cy - 10, '#3a2e1a');
+                        game.particles.sparkle(e.cx + 10, e.cy - 24, '#5a4a28');
+                        game.particles.sparkle(e.cx - 12, e.cy - 16, '#3a2e1a');
                     }
                 }
                 game.camera.shake(4, 0.2);
                 break;
 
-            case 'khatfa': // عاصم: اندفاع سريع
+            case 'khatfa': // عاصم: اندفاع سريع يدمّج كل اللي في طريقه
                 this.vx = this.facing * 900;
                 this.vy = 0;
                 this.invulnTime = Math.max(this.invulnTime, 0.3);
+                this.dashHitList = []; // من تضرر في هذه الخطفة (مرة واحدة لكل هدف)
                 game.particles.speedLines(this.cx, this.cy, this.facing, '#ff9d3c');
                 break;
 
-            case 'dafaa': // عبد العليم: دفع كل شيء أمامه
+            case 'dafaa': // عبد العليم: دفع ودمج قوي لكل شيء أمامه
                 game.particles.wave(this.cx + this.facing * 30, this.cy, '#a8e063');
                 game.camera.shake(8, 0.25);
                 for (const e of world.enemies) {
                     if (e.alive && Physics.dist(this, e) < 200 &&
                         Math.sign(e.cx - this.cx) === this.facing) {
                         Physics.knockback(e, this.cx, 700, 400);
-                        e.takeDamage(this.attackPower * 1.5, this.cx, game);
+                        e.takeDamage(this.attackPower * 2.5, this.cx, game);
                         e.stunned = Math.max(e.stunned, 1);
                     }
                 }
-                // دفع اللاعبين الآخرين في وضع شارعنا
+                // دفع ودمج اللاعبين الآخرين في وضع شارعنا
                 if (game.otherPlayers) {
                     for (const p of game.otherPlayers(this)) {
                         if (Physics.dist(this, p) < 200 && Math.sign(p.cx - this.cx) === this.facing) {
                             if (p.remote && game.online) {
-                                game.online.sendEffect(p.netId, { push: [this.cx, 750, 420], stun: 0.8 });
+                                game.online.sendEffect(p.netId, { push: [this.cx, 750, 420], stun: 0.8, dmg: this.attackPower * 1.5, fx: this.cx });
                             } else {
                                 Physics.knockback(p, this.cx, 750, 420);
                                 p.stunned = Math.max(p.stunned, 0.8);
+                                p.takeDamage(this.attackPower * 1.5, this.cx, game);
                             }
                             Audio2.play('hit');
                         }
@@ -249,10 +273,12 @@ class Player {
                         }
                     }
                     if (best) {
+                        // تجميد + دمج مرتفع
                         if (best.remote && game.online) {
-                            game.online.sendEffect(best.netId, { frz: ab.duration });
+                            game.online.sendEffect(best.netId, { frz: ab.duration, dmg: this.attackPower * 2, fx: this.cx });
                         } else {
                             best.frozen = ab.duration;
+                            best.takeDamage(this.attackPower * 2, this.cx, game);
                         }
                         game.particles.sparkle(best.cx, best.cy, '#c8a2ff');
                         Audio2.play('stun');
@@ -299,21 +325,22 @@ class Player {
     }
 
     /* ---------- الهجوم القريب ---------- */
-    attack(game, world) {
+    attack(game, world, dmgMult) {
+        dmgMult = dmgMult || 1;
         this.attackAnim = 0.3;
         Audio2.play('hit');
         const range = { x: this.facing === 1 ? this.x + this.w : this.x - 46, y: this.y, w: 46, h: this.h };
         let landed = false;
         for (const e of world.enemies) {
             if (e.alive && Physics.aabb(range, e)) {
-                e.takeDamage(this.attackPower, this.cx, game);
+                e.takeDamage(this.attackPower * dmgMult, this.cx, game);
                 landed = true;
             }
         }
         if (game.otherPlayers) {
             for (const p of game.otherPlayers(this)) {
                 if (p.alive && p.invulnTime <= 0 && Physics.aabb(range, p)) {
-                    p.takeDamage(this.attackPower, this.cx, game);
+                    p.takeDamage(this.attackPower * dmgMult, this.cx, game);
                     Physics.knockback(p, this.cx, 420, 280);
                     landed = true;
                     if (game.onPlayerHit) game.onPlayerHit(this, p);

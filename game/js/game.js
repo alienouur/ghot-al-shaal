@@ -28,6 +28,9 @@ class Game {
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
+        // الهواتف: تغيّر الحجم عند إخفاء/إظهار شريط العنوان أو تدوير الشاشة
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
+        window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 300));
 
         // تفعيل الصوت عند أول تفاعل
         const initAudio = () => {
@@ -46,14 +49,30 @@ class Game {
     resize() {
         // دقة CSS مباشرة — أخف على الأجهزة الضعيفة
         this.dpr = 1;
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.canvas.style.width = window.innerWidth + 'px';
-        this.canvas.style.height = window.innerHeight + 'px';
-        this.camera.resize(window.innerWidth, window.innerHeight);
+        // قياس الحاوية (تستخدم dvh = الارتفاع المرئي الفعلي على الهواتف)
+        const box = document.getElementById('game-container');
+        const w = box.clientWidth || window.innerWidth;
+        const h = box.clientHeight || window.innerHeight;
+        this.canvas.width = w;
+        this.canvas.height = h;
+        this.canvas.style.width = w + 'px';
+        this.canvas.style.height = h + 'px';
+        this.camera.resize(w, h);
     }
 
     settingsShake() { return SaveSystem.data.settings.screenShake; }
+
+    /* منع اللاعبين من الابتعاد عن بعضهم أكثر من مجال الكاميرا (وضع شارعنا المحلي) */
+    clampPlayersToView(players) {
+        const cam = this.camera;
+        const margin = 30;
+        const left = cam.x + margin;
+        const right = cam.x + cam.viewW / cam.zoom - margin;
+        for (const p of players) {
+            if (p.x < left) { p.x = left; if (p.vx < 0) p.vx = 0; }
+            if (p.x + p.w > right) { p.x = right - p.w; if (p.vx > 0) p.vx = 0; }
+        }
+    }
 
     /* ---------- بدء طور القصة ---------- */
     startStory(char) {
@@ -249,7 +268,10 @@ class Game {
 
         // الكاميرا
         if (this.state === 'STREET' && this.players.length > 1 && !this.online) {
-            this.camera.followGroup(this.players.filter(p => !p.eliminated));
+            const active = this.players.filter(p => !p.eliminated);
+            this.camera.followGroup(active);
+            // منع أي لاعب من الخروج عن حدود الشاشة المشتركة
+            this.clampPlayersToView(active);
         }
         this.camera.update(dt);
 
