@@ -21,7 +21,7 @@ const GAME_DATA = {
             id: 'asem',
             name: 'عاصم',
             role: 'السريع',
-            ability: { id: 'khatfa', name: 'الخطفة', desc: 'اندفاع سريع يدمّج كل اللي يمر عليه', cooldown: 4, duration: 0.3 },
+            ability: { id: 'khatfa', name: 'الخطفة', desc: 'اندفاع سريع يدمّج كل اللي يمر عليه دمج قوي', cooldown: 3, duration: 0.35 },
             stats: { speed: 5, power: 2, stealth: 3, intelligence: 2 },
             colors: { skin: '#d9a06b', shirt: '#e33f3f', pants: '#1e2a45', hair: '#100a05', accent: '#ff9d3c' }
         },
@@ -29,7 +29,7 @@ const GAME_DATA = {
             id: 'abdulalim',
             name: 'عبد العليم',
             role: 'القوي',
-            ability: { id: 'dafaa', name: 'الدفعة', desc: 'يدفع ويدمّج كل اللي قدامه بضرر قوي', cooldown: 6, duration: 0.4 },
+            ability: { id: 'dafaa', name: 'الدفعة', desc: 'يدفع ويدمّج كل اللي قدامه دمج ساحق', cooldown: 5, duration: 0.4 },
             stats: { speed: 2, power: 5, stealth: 1, intelligence: 3 },
             colors: { skin: '#c98d5e', shirt: '#3d9d4e', pants: '#3a2e22', hair: '#1a120a', accent: '#a8e063' }
         },
@@ -37,7 +37,7 @@ const GAME_DATA = {
             id: 'siddiq',
             name: 'صديق',
             role: 'الماكر',
-            ability: { id: 'ain', name: 'العين', desc: 'يجمّد الخصم ويدمّجه دمج مرتفع', cooldown: 9, duration: 2.2 },
+            ability: { id: 'ain', name: 'العين', desc: 'يجمّد الخصم مدة أطول ويدمّجه دمج مرتفع جدًا', cooldown: 7, duration: 3 },
             stats: { speed: 3, power: 2, stealth: 4, intelligence: 3 },
             colors: { skin: '#e5b088', shirt: '#8d4fd3', pants: '#242038', hair: '#2a1c0e', accent: '#c8a2ff' }
         },
@@ -45,7 +45,7 @@ const GAME_DATA = {
             id: 'alwani',
             name: 'علوني',
             role: 'الذكي',
-            ability: { id: 'tamweh', name: 'التمويه', desc: 'اختفاء طويل مع زيادة السرعة والدمج', cooldown: 10, duration: 5 },
+            ability: { id: 'tamweh', name: 'التمويه', desc: 'اختفاء طويل مع سرعة عالية ودمج مضاعف', cooldown: 9, duration: 6 },
             stats: { speed: 4, power: 1, stealth: 5, intelligence: 5 },
             colors: { skin: '#dba97a', shirt: '#e8c93a', pants: '#33303f', hair: '#151009', accent: '#fff3a0' }
         }

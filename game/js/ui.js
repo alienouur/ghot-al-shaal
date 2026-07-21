@@ -475,7 +475,7 @@ class UI {
         wrap.innerHTML = players.map((p, i) => `
             <div class="hud-player" id="hud-p${i}">
                 <div class="hud-name" style="color:${GAME_DATA.playerTagColors[i]}">${p.char.name}</div>
-                <div class="hud-health-bar"><div class="hud-health-fill" id="hud-hp${i}"></div></div>
+                <div class="hud-health-bar"><div class="hud-health-fill" id="hud-hp${i}"></div><span class="hud-hp-text" id="hud-hptext${i}"></span></div>
                 <div class="hud-ability-row">
                     <div class="hud-ability-icon" style="background:${p.char.colors.shirt}">⚡</div>
                     <div class="hud-cd-bar"><div class="hud-cd-fill" id="hud-cd${i}"></div></div>
@@ -487,7 +487,14 @@ class UI {
         players.forEach((p, i) => {
             const hp = document.getElementById('hud-hp' + i);
             const cd = document.getElementById('hud-cd' + i);
-            if (hp) hp.style.width = Math.max(0, (p.health / p.maxHealth) * 100) + '%';
+            if (hp) {
+                const ratio = Math.max(0, p.health / p.maxHealth);
+                hp.style.width = ratio * 100 + '%';
+                hp.classList.toggle('low', ratio <= 0.3);
+                hp.classList.toggle('mid', ratio > 0.3 && ratio <= 0.6);
+                const txt = document.getElementById('hud-hptext' + i);
+                if (txt) txt.textContent = Math.max(0, Math.ceil(p.health)) + '/' + p.maxHealth;
+            }
             if (cd) {
                 const ratio = p.abilityCooldown <= 0 ? 1 : 1 - (p.abilityCooldown / p.char.ability.cooldown);
                 cd.style.width = (ratio * 100) + '%';

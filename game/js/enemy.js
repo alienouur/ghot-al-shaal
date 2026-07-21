@@ -241,11 +241,21 @@ class Enemy {
 
     drawHealthBar(ctx) {
         if (this.health >= this.maxHealth) return;
-        const w = 40;
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(this.cx - w / 2, this.y - 10, w, 5);
-        ctx.fillStyle = '#e04545';
-        ctx.fillRect(this.cx - w / 2, this.y - 10, w * (this.health / this.maxHealth), 5);
+        // البوسات: شريط أعرض وأوضح
+        const boss = this.maxHealth > 100;
+        const w = boss ? 74 : 52;
+        const h = boss ? 8 : 6;
+        const x = this.cx - w / 2, y = this.y - (boss ? 18 : 13);
+        const ratio = Math.max(0, this.health / this.maxHealth);
+        // خلفية + إطار
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+        // اللون حسب الصحة
+        ctx.fillStyle = ratio > 0.6 ? '#4ecb5e' : ratio > 0.3 ? '#f5a623' : '#e04545';
+        ctx.fillRect(x, y, w * ratio, h);
+        // لمعة خفيفة
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fillRect(x, y, w * ratio, 2);
     }
 }
 

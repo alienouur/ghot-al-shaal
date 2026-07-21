@@ -93,7 +93,7 @@ class Player {
         // سرعة فعلية
         let speed = this.moveSpeed;
         if (input.run) speed *= P.runMultiplier;
-        if (cloaked) speed *= 1.45;
+        if (cloaked) speed *= 1.6;
 
         // التسلق
         const canClimb = Physics.touchingClimbable(this, world.climbables);
@@ -136,9 +136,9 @@ class Player {
             this.useAbility(game, world);
         }
 
-        // الهجوم (التمويه يزيد الدمج)
+        // الهجوم (التمويه يضاعف الدمج)
         if (input.attack && this.attackAnim <= 0) {
-            this.attack(game, world, cloaked ? 1.6 : 1);
+            this.attack(game, world, cloaked ? 2.2 : 1);
         }
 
         this.hitWall = false;
@@ -168,8 +168,8 @@ class Player {
             for (const e of world.enemies) {
                 if (e.alive && !list.includes(e) && Physics.aabb(this, e)) {
                     list.push(e);
-                    e.takeDamage(this.attackPower * 1.5, this.cx, game);
-                    Physics.knockback(e, this.cx, 500, 300);
+                    e.takeDamage(this.attackPower * 2.5, this.cx, game);
+                    Physics.knockback(e, this.cx, 550, 320);
                     game.particles.hit(e.cx, e.cy, '#ff9d3c');
                 }
             }
@@ -177,7 +177,7 @@ class Player {
                 for (const p of game.otherPlayers(this)) {
                     if (!list.includes(p) && Physics.aabb(this, p)) {
                         list.push(p);
-                        p.takeDamage(this.attackPower * 1.5, this.cx, game);
+                        p.takeDamage(this.attackPower * 2, this.cx, game);
                         game.particles.hit(p.cx, p.cy, '#ff9d3c');
                     }
                 }
@@ -233,11 +233,11 @@ class Player {
                 game.particles.wave(this.cx + this.facing * 30, this.cy, '#a8e063');
                 game.camera.shake(8, 0.25);
                 for (const e of world.enemies) {
-                    if (e.alive && Physics.dist(this, e) < 200 &&
+                    if (e.alive && Physics.dist(this, e) < 240 &&
                         Math.sign(e.cx - this.cx) === this.facing) {
-                        Physics.knockback(e, this.cx, 700, 400);
-                        e.takeDamage(this.attackPower * 2.5, this.cx, game);
-                        e.stunned = Math.max(e.stunned, 1);
+                        Physics.knockback(e, this.cx, 750, 420);
+                        e.takeDamage(this.attackPower * 3.5, this.cx, game);
+                        e.stunned = Math.max(e.stunned, 1.5);
                     }
                 }
                 // دفع ودمج اللاعبين الآخرين في وضع شارعنا
@@ -259,7 +259,7 @@ class Player {
 
             case 'ain': // صديق: تجميد أقرب خصم
                 {
-                    let best = null, bd = 500;
+                    let best = null, bd = 620;
                     for (const e of world.enemies) {
                         if (e.alive) {
                             const d = Physics.dist(this, e);
@@ -275,10 +275,10 @@ class Player {
                     if (best) {
                         // تجميد + دمج مرتفع
                         if (best.remote && game.online) {
-                            game.online.sendEffect(best.netId, { frz: ab.duration, dmg: this.attackPower * 2, fx: this.cx });
+                            game.online.sendEffect(best.netId, { frz: ab.duration, dmg: this.attackPower * 3, fx: this.cx });
                         } else {
                             best.frozen = ab.duration;
-                            best.takeDamage(this.attackPower * 2, this.cx, game);
+                            best.takeDamage(this.attackPower * 3, this.cx, game);
                         }
                         game.particles.sparkle(best.cx, best.cy, '#c8a2ff');
                         Audio2.play('stun');
