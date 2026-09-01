@@ -4,7 +4,9 @@ import { STRUCTURE_MAP, generateQuestions, questionText } from './data/structure
 import { LeaderboardStorage } from './storage/LeaderboardStorage';
 import { Sound } from './game/sound';
 import CellScene from './cell/CellScene';
+import { loadLayout } from './cell/layout';
 import StartScreen from './screens/StartScreen';
+import EditorScreen from './screens/EditorScreen';
 import ResultsScreen from './screens/ResultsScreen';
 import LeaderboardScreen from './screens/LeaderboardScreen';
 import HUD from './components/HUD';
@@ -29,7 +31,7 @@ const initialState = {
   correctAnswers: 0,
   wrongAnswers: 0,
   timeRemaining: GAME_CONFIG.timePerQuestion,
-  gameStatus: 'START', // START | PLAYING | FEEDBACK | FINISHED | LEADERBOARD
+  gameStatus: 'START', // START | PLAYING | FEEDBACK | FINISHED | LEADERBOARD | EDITOR
 };
 
 export default function App() {
@@ -39,6 +41,7 @@ export default function App() {
   const [flashId, setFlashId] = useState(null);
   const [muted, setMuted] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
+  const [layout, setLayout] = useState(() => loadLayout());
   const answeredRef = useRef(false);
   const startTimeRef = useRef(0);
   const hasWebGL = useMemo(() => webglAvailable(), []);
@@ -178,6 +181,7 @@ export default function App() {
               flashId={flashId}
               interactive={state.gameStatus === 'PLAYING'}
               resetSignal={resetSignal}
+              layout={layout}
             />
           </div>
           <HUD
@@ -209,6 +213,15 @@ export default function App() {
           muted={muted}
           onToggleMute={toggleMute}
           onLeaderboard={() => setState((s) => ({ ...s, gameStatus: 'LEADERBOARD' }))}
+          onEditor={() => setState((s) => ({ ...s, gameStatus: 'EDITOR' }))}
+        />
+      )}
+
+      {state.gameStatus === 'EDITOR' && (
+        <EditorScreen
+          layout={layout}
+          onLayoutChange={setLayout}
+          onBack={() => setState({ ...initialState, playerName: state.playerName })}
         />
       )}
 

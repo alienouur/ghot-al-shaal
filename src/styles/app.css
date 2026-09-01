@@ -492,3 +492,92 @@ body,
     bottom: 80px;
   }
 }
+
+/* ---------- Model editor ---------- */
+.editor-screen {
+  position: absolute;
+  inset: 0;
+}
+
+.editor-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  width: min(280px, calc(100vw - 24px));
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(10, 18, 34, 0.88);
+  backdrop-filter: blur(6px);
+}
+
+.editor-panel h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+}
+
+.editor-hint {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.editor-selected {
+  min-height: 74px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(30, 45, 72, 0.5);
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-scale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.editor-scale input {
+  flex: 1;
+}
+
+.editor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.editor-actions .big-btn {
+  min-height: 44px;
+  padding: 10px;
+  font-size: 0.85rem;
+}
+
+.editor-selected .link-btn {
+  margin-top: 2px;
+  padding: 0;
+  text-align: left;
+}
+
+.editor-saved {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: #6ee7a0;
+}
+
+@media (max-width: 600px) {
+  .editor-panel {
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { GAME_CONFIG } from '../config';
 
-export default function StartScreen({ onStart, muted, onToggleMute, onLeaderboard }) {
+export default function StartScreen({ onStart, muted, onToggleMute, onLeaderboard, onEditor }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const valid = name.trim().length >= 2;
@@ -59,6 +59,9 @@ export default function StartScreen({ onStart, muted, onToggleMute, onLeaderboar
         </div>
         <button className="link-btn" onClick={onLeaderboard}>
           View Leaderboard
+        </button>
+        <button className="link-btn" onClick={onEditor}>
+          🛠 Model Editor
         </button>
       </div>
     </div>

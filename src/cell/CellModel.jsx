@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import * as THREE from 'three';
+import { DEFAULT_LAYOUT } from './layout';
 
 /*
  * Physical educational cell cross-section model: frosted upright resin disc
@@ -24,6 +25,17 @@ const noRaycast = () => {};
 
 function useHighlight(id, hoveredId, flashId) {
   return hoveredId === id || flashId === id;
+}
+
+// In editor mode, attach a pointer-down handler that starts dragging a unit.
+function pickProps(editor, unit) {
+  if (!editor) return {};
+  return {
+    onPointerDown: (e) => {
+      e.stopPropagation();
+      editor.onPick(unit, e);
+    },
+  };
 }
 
 function Selectable({ id, onSelect, onHover, children }) {
@@ -144,8 +156,9 @@ function PlasmaMembrane({ hovered, flash, onSelect, onHover }) {
 }
 
 /* ---------- Nucleus: raised white dome, blue pores, orange nucleolus ---------- */
-function Nucleus({ hovered, flash, onSelect, onHover }) {
-  const hl = useHighlight('nucleus', hovered, flash);
+function Nucleus({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.nucleus;
+  const hl = useHighlight('nucleus', hovered, flash) || editor?.selected === 'nucleus';
   const pores = useMemo(() => {
     const list = [];
     for (let i = 0; i < 22; i++) {
@@ -171,7 +184,12 @@ function Nucleus({ hovered, flash, onSelect, onHover }) {
   return (
     <Selectable id="nucleus" onSelect={onSelect} onHover={onHover}>
       {/* raised dome in the center; window faces the viewer slightly right */}
-      <group position={[0, 0.1, FACE_Z + 0.9]} rotation={[0.1, -0.15, 0]}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.9]}
+        scale={u.s}
+        rotation={[0.1, -0.15, 0]}
+        {...pickProps(editor, 'nucleus')}
+      >
         {/* white envelope with cutaway window facing the viewer */}
         <mesh
           userData={{ structureId: 'nucleus' }}
@@ -233,12 +251,17 @@ const ROUGH_ER_CURVES = [
   ],
 ];
 
-function RoughER({ hovered, flash, onSelect, onHover }) {
-  const hl = useHighlight('rough_er', hovered, flash);
+function RoughER({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.rough_er;
+  const hl = useHighlight('rough_er', hovered, flash) || editor?.selected === 'rough_er';
   const curves = useMemo(() => ROUGH_ER_CURVES.map(makeCurve), []);
   return (
     <Selectable id="rough_er" onSelect={onSelect} onHover={onHover}>
-      <group position={[0, 0, FACE_Z + 0.18]}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.18]}
+        scale={u.s}
+        {...pickProps(editor, 'rough_er')}
+      >
         {curves.map((c, i) => (
           <TubeMesh key={i} curve={c} radius={0.21} color="#1b2f6e" hl={hl} id="rough_er" />
         ))}
@@ -248,7 +271,8 @@ function RoughER({ hovered, flash, onSelect, onHover }) {
 }
 
 /* ---------- Bound ribosomes: white dots ON the rough ER ---------- */
-function BoundRibosomes({ hovered, flash, onSelect, onHover }) {
+function BoundRibosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.rough_er; // bound ribosomes follow the rough ER
   const hl = useHighlight('bound_ribosomes', hovered, flash);
   const dots = useMemo(() => {
     const curves = ROUGH_ER_CURVES.map(makeCurve);
@@ -266,7 +290,11 @@ function BoundRibosomes({ hovered, flash, onSelect, onHover }) {
   }, []);
   return (
     <Selectable id="bound_ribosomes" onSelect={onSelect} onHover={onHover}>
-      <group position={[0, 0, FACE_Z + 0.18]}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.18]}
+        scale={u.s}
+        {...pickProps(editor, 'rough_er')}
+      >
         {dots.map((p, i) => (
           <group key={i} position={p}>
             <mesh userData={{ structureId: 'bound_ribosomes' }}>
@@ -292,8 +320,9 @@ const SMOOTH_ER_BLOBS = [
   { position: [3.5, -2.9, 0], scale: [0.4, 0.3, 0.22] },
 ];
 
-function SmoothER({ hovered, flash, onSelect, onHover }) {
-  const hl = useHighlight('smooth_er', hovered, flash);
+function SmoothER({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.smooth_er;
+  const hl = useHighlight('smooth_er', hovered, flash) || editor?.selected === 'smooth_er';
   const curves = useMemo(
     () =>
       [
@@ -319,7 +348,11 @@ function SmoothER({ hovered, flash, onSelect, onHover }) {
   );
   return (
     <Selectable id="smooth_er" onSelect={onSelect} onHover={onHover}>
-      <group position={[0, 0, FACE_Z + 0.16]}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.16]}
+        scale={u.s}
+        {...pickProps(editor, 'smooth_er')}
+      >
         {curves.map((c, i) => (
           <TubeMesh key={i} curve={c} radius={0.15} color="#4fd0ca" hl={hl} id="smooth_er" />
         ))}
@@ -332,15 +365,20 @@ function SmoothER({ hovered, flash, onSelect, onHover }) {
 }
 
 /* ---------- Golgi: pink curved stacked flattened sacs ---------- */
-function Golgi({ hovered, flash, onSelect, onHover }) {
-  const hl = useHighlight('golgi_complex', hovered, flash);
+function Golgi({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.golgi;
+  const hl = useHighlight('golgi_complex', hovered, flash) || editor?.selected === 'golgi';
   const arcs = [0.55, 0.85, 1.15, 1.45, 1.75];
   const vesicles = [
     [-1.1, 0.9, 0], [1.2, 1.0, 0], [-1.5, -0.3, 0], [1.6, -0.2, 0], [0.1, 1.35, 0],
   ];
   return (
     <Selectable id="golgi_complex" onSelect={onSelect} onHover={onHover}>
-      <group position={[-0.4, 2.7, FACE_Z + 0.16]}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.16]}
+        scale={u.s}
+        {...pickProps(editor, 'golgi')}
+      >
         {arcs.map((r, i) => (
           <mesh
             key={i}
@@ -364,7 +402,7 @@ function Golgi({ hovered, flash, onSelect, onHover }) {
 }
 
 /* ---------- Mitochondria: bright orange ovals with dark zig-zag cristae ---------- */
-function Mitochondrion({ position, rotation = 0, scale = 1, hl }) {
+function Mitochondrion({ position, rotation = 0, scale = 1, hl, editor, unit }) {
   const cristaeCurve = useMemo(
     () =>
       makeCurve([
@@ -374,7 +412,12 @@ function Mitochondrion({ position, rotation = 0, scale = 1, hl }) {
     []
   );
   return (
-    <group position={position} rotation={[0, 0, rotation]} scale={scale}>
+    <group
+      position={position}
+      rotation={[0, 0, rotation]}
+      scale={scale}
+      {...pickProps(editor, unit)}
+    >
       {/* bright orange glossy body */}
       <mesh userData={{ structureId: 'mitochondria' }} scale={[1, 0.55, 0.4]}>
         <sphereGeometry args={[0.95, 32, 24]} />
@@ -395,53 +438,78 @@ function Mitochondrion({ position, rotation = 0, scale = 1, hl }) {
   );
 }
 
-function Mitochondria({ hovered, flash, onSelect, onHover }) {
+const MITO_BASE = [
+  { rotation: 0.35, scale: 0.9 },
+  { rotation: 1.1, scale: 0.8 },
+  { rotation: -0.4, scale: 0.8 },
+  { rotation: 0.5, scale: 0.7 },
+  { rotation: 0.15, scale: 0.8 },
+];
+
+function Mitochondria({ hovered, flash, onSelect, onHover, layout, editor }) {
   const hl = useHighlight('mitochondria', hovered, flash);
   return (
     <Selectable id="mitochondria" onSelect={onSelect} onHover={onHover}>
       <group position={[0, 0, FACE_Z + 0.22]}>
-        <Mitochondrion position={[1.4, 3.5, 0]} rotation={0.35} scale={0.9} hl={hl} />
-        <Mitochondrion position={[-2.0, 3.4, 0]} rotation={1.1} scale={0.8} hl={hl} />
-        <Mitochondrion position={[-4.0, -1.2, 0]} rotation={-0.4} scale={0.8} hl={hl} />
-        <Mitochondrion position={[-1.4, -2.2, 0]} rotation={0.5} scale={0.7} hl={hl} />
-        <Mitochondrion position={[1.0, -3.3, 0]} rotation={0.15} scale={0.8} hl={hl} />
+        {MITO_BASE.map((b, i) => {
+          const u = layout[`mito_${i}`];
+          return (
+            <Mitochondrion
+              key={i}
+              position={[u.x, u.y, 0]}
+              rotation={b.rotation}
+              scale={b.scale * u.s}
+              hl={hl || editor?.selected === `mito_${i}`}
+              editor={editor}
+              unit={`mito_${i}`}
+            />
+          );
+        })}
       </group>
     </Selectable>
   );
 }
 
 /* ---------- Lysosomes: small glossy yellow/red beads ---------- */
-function Lysosomes({ hovered, flash, onSelect, onHover }) {
+const LYSO_BASE = [
+  { color: '#e33d24', scale: 1 },
+  { color: '#f4c430', scale: 1 },
+  { color: '#f4c430', scale: 0.85 },
+  { color: '#e33d24', scale: 0.85 },
+  { color: '#f4c430', scale: 0.8 },
+];
+
+function Lysosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
   const hl = useHighlight('lysosome', hovered, flash);
-  const beads = [
-    { position: [-3.4, 2.9, 0], color: '#e33d24', scale: 1 },
-    { position: [0.9, -4.2, 0], color: '#f4c430', scale: 1 },
-    { position: [-2.8, -3.2, 0], color: '#f4c430', scale: 0.85 },
-    { position: [-0.3, -3.4, 0], color: '#e33d24', scale: 0.85 },
-    { position: [1.9, 1.6, 0], color: '#f4c430', scale: 0.8 },
-  ];
   return (
     <Selectable id="lysosome" onSelect={onSelect} onHover={onHover}>
       <group position={[0, 0, FACE_Z + 0.2]}>
-        {beads.map((b, i) => (
-          <mesh
-            key={i}
-            userData={{ structureId: 'lysosome' }}
-            position={b.position}
-            scale={b.scale}
-          >
-            <sphereGeometry args={[0.34, 24, 18]} />
-            {glossy(b.color, hl, { roughness: 0.1 })}
-          </mesh>
-        ))}
+        {LYSO_BASE.map((b, i) => {
+          const u = layout[`lyso_${i}`];
+          return (
+            <mesh
+              key={i}
+              userData={{ structureId: 'lysosome' }}
+              position={[u.x, u.y, 0]}
+              scale={b.scale * u.s}
+              {...pickProps(editor, `lyso_${i}`)}
+            >
+              <sphereGeometry args={[0.34, 24, 18]} />
+              {glossy(b.color, hl || editor?.selected === `lyso_${i}`, { roughness: 0.1 })}
+            </mesh>
+          );
+        })}
       </group>
     </Selectable>
   );
 }
 
 /* ---------- Free ribosomes: white dots scattered on the disc ---------- */
-function FreeRibosomes({ hovered, flash, onSelect, onHover }) {
-  const hl = useHighlight('free_ribosomes', hovered, flash);
+function FreeRibosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.free_ribosomes;
+  const hl =
+    useHighlight('free_ribosomes', hovered, flash) ||
+    editor?.selected === 'free_ribosomes';
   const dots = useMemo(() => {
     const list = [];
     const seed = { v: 42 };
@@ -477,7 +545,11 @@ function FreeRibosomes({ hovered, flash, onSelect, onHover }) {
   }, []);
   return (
     <Selectable id="free_ribosomes" onSelect={onSelect} onHover={onHover}>
-      <group position={[0, 0, FACE_Z + 0.12]}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.12]}
+        scale={u.s}
+        {...pickProps(editor, 'free_ribosomes')}
+      >
         {dots.map((p, i) => (
           <group key={i} position={p}>
             <mesh userData={{ structureId: 'free_ribosomes' }}>
@@ -494,7 +566,13 @@ function FreeRibosomes({ hovered, flash, onSelect, onHover }) {
   );
 }
 
-export default function CellModel({ onSelect, flashId, interactive = true }) {
+export default function CellModel({
+  onSelect,
+  flashId,
+  interactive = true,
+  layout = DEFAULT_LAYOUT,
+  editor = null,
+}) {
   const [hovered, setHovered] = useState(null);
   const handleSelect = useCallback(
     (id) => {
@@ -506,7 +584,14 @@ export default function CellModel({ onSelect, flashId, interactive = true }) {
     (id) => setHovered(interactive ? id : null),
     [interactive]
   );
-  const common = { hovered, flash: flashId, onSelect: handleSelect, onHover: handleHover };
+  const common = {
+    hovered,
+    flash: flashId,
+    onSelect: handleSelect,
+    onHover: handleHover,
+    layout,
+    editor,
+  };
   return (
     <group>
       <Disc />
