@@ -2,15 +2,15 @@ import { useMemo, useState, useCallback } from 'react';
 import * as THREE from 'three';
 
 /*
- * Replica of a physical educational cell cross-section model:
- * frosted upright resin disc with a thin teal rim on a black stand.
- * - Mint-green blobby rough ER (with white bound-ribosome dots) hugging the
- *   nucleus and running up the right side.
- * - Navy squiggly smooth ER ribbons (no dots).
- * - White cutaway nucleus with teal interior, amber nucleolus, blue pores.
- * - Red/pink concentric Golgi arcs with vesicles (upper middle).
- * - Orange mitochondria with dark interiors and orange cristae squiggles.
- * - Yellow/red ringed lysosome beads.
+ * Physical educational cell cross-section model: frosted upright resin disc
+ * with a rim (plasma membrane) on a black stand.
+ * - Large raised white dome nucleus in the center with blue nuclear pores and
+ *   an orange nucleolus visible through a cutaway window.
+ * - Navy folded maze-like rough ER (left) with white bound-ribosome dots.
+ * - Light teal branching smooth ER tubes (right), no dots.
+ * - Pink curved stacked Golgi sacs (upper middle).
+ * - Bright orange glossy mitochondria with dark zig-zag cristae.
+ * - Small glossy yellow/red lysosome beads.
  * - Tiny white free-ribosome dots scattered on the disc.
  * Every selectable mesh carries userData.structureId; R3F raycast events with
  * stopPropagation make the front-most object win (ribosomes over rough ER).
@@ -143,26 +143,35 @@ function PlasmaMembrane({ hovered, flash, onSelect, onHover }) {
   );
 }
 
-/* ---------- Nucleus: white cutaway sphere, teal interior, amber nucleolus ---------- */
+/* ---------- Nucleus: raised white dome, blue pores, orange nucleolus ---------- */
 function Nucleus({ hovered, flash, onSelect, onHover }) {
   const hl = useHighlight('nucleus', hovered, flash);
-  const dots = useMemo(() => {
+  const pores = useMemo(() => {
     const list = [];
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 22; i++) {
       const theta = (i * 2.39996) % (Math.PI * 2); // golden angle spiral
-      const phi = 0.5 + (i / 26) * 2.1;
-      const r = 1.52;
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.cos(phi);
-      const z = r * Math.sin(phi) * Math.sin(theta);
-      if (z > -0.2 && !(x > 0 && z > 0.4)) list.push([x, y, z]);
+      const phi = 0.4 + (i / 22) * 1.9;
+      const r = 1.55;
+      const p = new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.cos(phi),
+        r * Math.sin(phi) * Math.sin(theta)
+      );
+      // keep pores on the visible front hemisphere, away from the window
+      if (p.z < 0.4) continue;
+      if (p.x > 0.4 && p.z > 0.9) continue;
+      const quat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        p.clone().normalize()
+      );
+      list.push({ position: p.toArray(), quaternion: quat });
     }
     return list;
   }, []);
   return (
     <Selectable id="nucleus" onSelect={onSelect} onHover={onHover}>
-      {/* opening faces the viewer slightly right, like the photo */}
-      <group position={[0.1, -0.7, FACE_Z + 0.9]} rotation={[0.1, -0.15, 0]}>
+      {/* raised dome in the center; window faces the viewer slightly right */}
+      <group position={[0, 0.1, FACE_Z + 0.9]} rotation={[0.1, -0.15, 0]}>
         {/* white envelope with cutaway window facing the viewer */}
         <mesh
           userData={{ structureId: 'nucleus' }}
@@ -170,91 +179,58 @@ function Nucleus({ hovered, flash, onSelect, onHover }) {
         >
           <sphereGeometry args={[1.55, 48, 32, 0, Math.PI * 1.55]} />
           <meshStandardMaterial
-            color="#f3ece6"
-            roughness={0.28}
+            color="#f5f2ec"
+            roughness={0.25}
             side={THREE.DoubleSide}
             emissive={hl ? '#4dd7ff' : '#000000'}
             emissiveIntensity={hl ? 0.55 : 0}
           />
         </mesh>
-        {/* pale teal interior */}
+        {/* pale interior */}
         <mesh userData={{ structureId: 'nucleus' }}>
           <sphereGeometry args={[1.3, 32, 24]} />
-          {glossy('#b7d4c6', hl, { roughness: 0.4 })}
+          {glossy('#ded6ca', hl, { roughness: 0.45 })}
         </mesh>
-        {/* amber nucleolus resting in the opening */}
-        <mesh userData={{ structureId: 'nucleus' }} position={[0.35, 0.05, 1.15]}>
-          <sphereGeometry args={[0.52, 32, 24]} />
-          <meshPhysicalMaterial
-            color="#8a4a12"
-            roughness={0.15}
-            clearcoat={1}
-            transparent
-            opacity={0.92}
-            emissive={hl ? '#4dd7ff' : '#2a1200'}
-            emissiveIntensity={hl ? 0.55 : 0.25}
-          />
+        {/* solid orange nucleolus visible through the window */}
+        <mesh userData={{ structureId: 'nucleus' }} position={[0.35, 0.05, 1.05]}>
+          <sphereGeometry args={[0.55, 32, 24]} />
+          {glossy('#f28c28', hl, { roughness: 0.15 })}
         </mesh>
-        {/* small blue pore marks on the white envelope */}
-        {dots.map((p, i) =>
-          i % 3 === 0 ? (
-            <mesh
-              key={i}
-              userData={{ structureId: 'nucleus' }}
-              position={p}
-              scale={[0.09, 0.16, 0.05]}
-            >
-              <boxGeometry args={[1, 1, 1]} />
-              {glossy('#2b3f9e', hl)}
-            </mesh>
-          ) : (
-            <mesh key={i} userData={{ structureId: 'nucleus' }} position={p}>
-              <sphereGeometry args={[0.045, 8, 6]} />
-              {glossy('#ffffff', hl)}
-            </mesh>
-          )
-        )}
+        {/* blue-ringed nuclear pores on the dome surface */}
+        {pores.map((p, i) => (
+          <mesh
+            key={i}
+            userData={{ structureId: 'nucleus' }}
+            position={p.position}
+            quaternion={p.quaternion}
+          >
+            <torusGeometry args={[0.11, 0.04, 10, 20]} />
+            {glossy('#2f6fd1', hl)}
+          </mesh>
+        ))}
       </group>
     </Selectable>
   );
 }
 
-/* ---------- Rough ER: mint-green blobby branches with white dots ---------- */
+/* ---------- Rough ER: navy folded maze-like ribbons (left of nucleus) ---------- */
 const ROUGH_ER_CURVES = [
-  // collar hugging the nucleus (top-left arc)
   [
-    [-1.9, 0.4, 0], [-1.4, 1.0, 0.05], [-0.5, 1.3, 0], [0.5, 1.2, 0.05], [1.3, 0.7, 0],
-  ],
-  // branch from collar up-left
-  [
-    [-1.6, 0.8, 0], [-2.3, 1.3, 0.05], [-2.9, 1.1, 0],
-  ],
-  // big branchy band running up the right side
-  [
-    [1.5, -1.6, 0], [2.3, -0.6, 0.05], [2.6, 0.6, 0], [2.9, 1.8, 0.05], [2.7, 3.0, 0], [3.2, 3.9, 0],
+    [-3.6, 2.0, 0], [-3.1, 2.5, 0.05], [-2.6, 2.0, 0], [-2.1, 2.5, 0.05], [-1.7, 2.0, 0],
   ],
   [
-    [2.6, 0.6, 0], [3.4, 0.9, 0.05], [3.9, 0.5, 0],
+    [-3.9, 1.2, 0], [-3.4, 1.7, 0.05], [-2.9, 1.2, 0], [-2.4, 1.7, 0.05], [-1.9, 1.2, 0],
   ],
   [
-    [2.9, 1.8, 0], [3.6, 2.1, 0.05], [4.1, 1.8, 0],
+    [-4.1, 0.4, 0], [-3.6, 0.9, 0.05], [-3.1, 0.4, 0], [-2.6, 0.9, 0.05], [-2.1, 0.4, 0],
   ],
   [
-    [2.3, -0.6, 0], [3.1, -0.9, 0.05], [3.7, -1.5, 0],
+    [-3.9, -0.4, 0], [-3.4, 0.1, 0.05], [-2.9, -0.4, 0], [-2.4, 0.1, 0.05], [-2.0, -0.4, 0],
   ],
-  // lower-right drooping branch
+  // connector fold
   [
-    [1.5, -1.6, 0], [1.9, -2.4, 0.05], [2.7, -2.8, 0], [3.4, -2.6, 0.05],
+    [-1.7, 2.0, 0], [-1.9, 1.6, 0.05], [-1.9, 1.2, 0],
   ],
-];
-
-const ROUGH_ER_BLOBS = [
-  { position: [-2.9, 1.1, 0], scale: [0.42, 0.3, 0.25] },
-  { position: [3.2, 3.9, 0], scale: [0.5, 0.38, 0.25] },
-  { position: [3.9, 0.5, 0], scale: [0.38, 0.3, 0.25] },
-  { position: [4.1, 1.8, 0], scale: [0.35, 0.28, 0.25] },
-  { position: [3.4, -2.6, 0], scale: [0.48, 0.34, 0.25] },
-  { position: [3.7, -1.5, 0], scale: [0.34, 0.28, 0.25] },
 ];
 
 function RoughER({ hovered, flash, onSelect, onHover }) {
@@ -262,12 +238,9 @@ function RoughER({ hovered, flash, onSelect, onHover }) {
   const curves = useMemo(() => ROUGH_ER_CURVES.map(makeCurve), []);
   return (
     <Selectable id="rough_er" onSelect={onSelect} onHover={onHover}>
-      <group position={[0, -0.5, FACE_Z + 0.18]}>
+      <group position={[0, 0, FACE_Z + 0.18]}>
         {curves.map((c, i) => (
-          <TubeMesh key={i} curve={c} radius={0.24} color="#7fd0b8" hl={hl} id="rough_er" />
-        ))}
-        {ROUGH_ER_BLOBS.map((b, i) => (
-          <Blob key={i} {...b} color="#7fd0b8" hl={hl} id="rough_er" />
+          <TubeMesh key={i} curve={c} radius={0.21} color="#1b2f6e" hl={hl} id="rough_er" />
         ))}
       </group>
     </Selectable>
@@ -281,8 +254,8 @@ function BoundRibosomes({ hovered, flash, onSelect, onHover }) {
     const curves = ROUGH_ER_CURVES.map(makeCurve);
     const list = [];
     curves.forEach((curve, ci) => {
-      const step = ci === 2 ? 0.07 : 0.12;
-      for (let t = 0.06; t < 1; t += step) {
+      const step = 0.09;
+      for (let t = 0.05; t < 1; t += step) {
         const p = curve.getPoint(t);
         const jx = Math.sin(t * 37 + ci) * 0.08;
         const jy = Math.cos(t * 51 + ci) * 0.08;
@@ -293,7 +266,7 @@ function BoundRibosomes({ hovered, flash, onSelect, onHover }) {
   }, []);
   return (
     <Selectable id="bound_ribosomes" onSelect={onSelect} onHover={onHover}>
-      <group position={[0, -0.5, FACE_Z + 0.18]}>
+      <group position={[0, 0, FACE_Z + 0.18]}>
         {dots.map((p, i) => (
           <group key={i} position={p}>
             <mesh userData={{ structureId: 'bound_ribosomes' }}>
@@ -311,37 +284,35 @@ function BoundRibosomes({ hovered, flash, onSelect, onHover }) {
   );
 }
 
-/* ---------- Smooth ER: navy squiggly ribbons, NO dots ---------- */
+/* ---------- Smooth ER: light teal branching tubes (right), NO dots ---------- */
+const SMOOTH_ER_BLOBS = [
+  { position: [3.2, 3.4, 0], scale: [0.42, 0.32, 0.22] },
+  { position: [3.9, 0.1, 0], scale: [0.34, 0.27, 0.22] },
+  { position: [4.1, 1.4, 0], scale: [0.32, 0.26, 0.22] },
+  { position: [3.5, -2.9, 0], scale: [0.4, 0.3, 0.22] },
+];
+
 function SmoothER({ hovered, flash, onSelect, onHover }) {
   const hl = useHighlight('smooth_er', hovered, flash);
   const curves = useMemo(
     () =>
       [
-        // upper-left branching squiggle cluster
+        // main branching trunk running up the right side
         [
-          [-3.3, 1.6, 0], [-2.7, 2.0, 0.05], [-2.1, 1.6, 0], [-1.6, 2.1, 0.05], [-1.1, 1.7, 0],
+          [1.6, -2.1, 0], [2.3, -1.1, 0.05], [2.6, 0.1, 0], [2.9, 1.3, 0.05], [2.7, 2.5, 0], [3.2, 3.4, 0],
         ],
         [
-          [-2.7, 0.6, 0], [-2.1, 1.0, 0.05], [-1.5, 0.6, 0], [-0.9, 1.0, 0.05],
-        ],
-        // left blobby branches
-        [
-          [-4.0, -0.6, 0], [-3.3, -0.3, 0.05], [-2.7, -0.8, 0], [-2.1, -0.5, 0.05], [-1.6, -1.0, 0],
+          [2.6, 0.1, 0], [3.3, 0.4, 0.05], [3.9, 0.1, 0],
         ],
         [
-          [-3.3, -0.3, 0], [-3.1, -1.2, 0.05], [-3.5, -1.8, 0],
-        ],
-        // long serpentine wave along the bottom
-        [
-          [-2.6, -2.6, 0], [-1.9, -2.1, 0.05], [-1.2, -2.7, 0], [-0.5, -2.1, 0.05],
-          [0.2, -2.8, 0], [0.9, -2.2, 0.05], [1.4, -3.0, 0], [0.7, -3.6, 0.05], [-0.2, -3.4, 0],
-        ],
-        // vertical squiggles near the top
-        [
-          [1.8, 4.4, 0], [2.0, 3.7, 0.05], [1.8, 3.0, 0],
+          [2.9, 1.3, 0], [3.6, 1.7, 0.05], [4.1, 1.4, 0],
         ],
         [
-          [-2.5, 4.1, 0], [-2.2, 3.5, 0.05], [-2.5, 2.9, 0],
+          [2.3, -1.1, 0], [3.0, -1.4, 0.05], [3.6, -2.0, 0],
+        ],
+        // lower drooping branch
+        [
+          [1.6, -2.1, 0], [2.0, -2.8, 0.05], [2.8, -3.2, 0], [3.5, -2.9, 0.05],
         ],
       ].map(makeCurve),
     []
@@ -350,14 +321,17 @@ function SmoothER({ hovered, flash, onSelect, onHover }) {
     <Selectable id="smooth_er" onSelect={onSelect} onHover={onHover}>
       <group position={[0, 0, FACE_Z + 0.16]}>
         {curves.map((c, i) => (
-          <TubeMesh key={i} curve={c} radius={0.16} color="#1c2a6b" hl={hl} id="smooth_er" />
+          <TubeMesh key={i} curve={c} radius={0.15} color="#4fd0ca" hl={hl} id="smooth_er" />
+        ))}
+        {SMOOTH_ER_BLOBS.map((b, i) => (
+          <Blob key={i} {...b} color="#4fd0ca" hl={hl} id="smooth_er" />
         ))}
       </group>
     </Selectable>
   );
 }
 
-/* ---------- Golgi: red/pink concentric arcs + vesicles ---------- */
+/* ---------- Golgi: pink curved stacked flattened sacs ---------- */
 function Golgi({ hovered, flash, onSelect, onHover }) {
   const hl = useHighlight('golgi_complex', hovered, flash);
   const arcs = [0.55, 0.85, 1.15, 1.45, 1.75];
@@ -366,21 +340,22 @@ function Golgi({ hovered, flash, onSelect, onHover }) {
   ];
   return (
     <Selectable id="golgi_complex" onSelect={onSelect} onHover={onHover}>
-      <group position={[-0.5, 2.5, FACE_Z + 0.16]}>
+      <group position={[-0.4, 2.7, FACE_Z + 0.16]}>
         {arcs.map((r, i) => (
           <mesh
             key={i}
             userData={{ structureId: 'golgi_complex' }}
             rotation={[0, 0, Math.PI * 0.18]}
+            scale={[1, 1, 0.6]}
           >
-            <torusGeometry args={[r, 0.13, 12, 48, Math.PI * 0.64]} />
-            {glossy('#d5495a', hl)}
+            <torusGeometry args={[r, 0.14, 12, 48, Math.PI * 0.64]} />
+            {glossy('#e75480', hl)}
           </mesh>
         ))}
         {vesicles.map((p, i) => (
           <mesh key={i} userData={{ structureId: 'golgi_complex' }} position={p}>
             <sphereGeometry args={[0.16, 14, 10]} />
-            {glossy('#d5495a', hl)}
+            {glossy('#e75480', hl)}
           </mesh>
         ))}
       </group>
@@ -388,33 +363,29 @@ function Golgi({ hovered, flash, onSelect, onHover }) {
   );
 }
 
-/* ---------- Mitochondria: orange ovals, dark interior, cristae squiggle ---------- */
+/* ---------- Mitochondria: bright orange ovals with dark zig-zag cristae ---------- */
 function Mitochondrion({ position, rotation = 0, scale = 1, hl }) {
   const cristaeCurve = useMemo(
     () =>
       makeCurve([
-        [-0.55, 0.12, 0], [-0.3, -0.12, 0.02], [-0.05, 0.12, 0], [0.2, -0.12, 0.02], [0.45, 0.1, 0],
+        [-0.6, 0.14, 0], [-0.35, -0.14, 0.02], [-0.1, 0.14, 0], [0.15, -0.14, 0.02],
+        [0.4, 0.14, 0], [0.6, -0.1, 0],
       ]),
     []
   );
   return (
     <group position={position} rotation={[0, 0, rotation]} scale={scale}>
-      {/* orange outer body */}
+      {/* bright orange glossy body */}
       <mesh userData={{ structureId: 'mitochondria' }} scale={[1, 0.55, 0.4]}>
         <sphereGeometry args={[0.95, 32, 24]} />
-        {glossy('#e8531f', hl)}
+        {glossy('#f2762e', hl, { roughness: 0.15 })}
       </mesh>
-      {/* dark interior */}
-      <mesh userData={{ structureId: 'mitochondria' }} scale={[0.78, 0.38, 0.42]} position={[0, 0, 0.02]}>
-        <sphereGeometry args={[0.95, 24, 18]} />
-        {glossy('#2e1c12', hl, { roughness: 0.35 })}
-      </mesh>
-      {/* orange cristae squiggle on the dark interior */}
-      <group position={[0.05, 0, 0.42]} scale={[1.15, 1.15, 1]}>
+      {/* dark zig-zag cristae on the body */}
+      <group position={[0, 0, 0.36]}>
         <TubeMesh
           curve={cristaeCurve}
-          radius={0.055}
-          color="#e8531f"
+          radius={0.06}
+          color="#26170e"
           hl={hl}
           id="mitochondria"
           segments={40}
@@ -429,42 +400,40 @@ function Mitochondria({ hovered, flash, onSelect, onHover }) {
   return (
     <Selectable id="mitochondria" onSelect={onSelect} onHover={onHover}>
       <group position={[0, 0, FACE_Z + 0.22]}>
-        <Mitochondrion position={[1.6, 4.0, 0]} rotation={0.35} scale={0.9} hl={hl} />
-        <Mitochondrion position={[-1.7, 3.1, 0]} rotation={1.15} scale={0.85} hl={hl} />
-        <Mitochondrion position={[-3.6, 1.0, 0]} rotation={-0.5} scale={0.95} hl={hl} />
-        <Mitochondrion position={[-4.1, -0.1, 0]} rotation={1.3} scale={0.6} hl={hl} />
-        <Mitochondrion position={[-1.3, -1.6, 0]} rotation={0.5} scale={0.65} hl={hl} />
+        <Mitochondrion position={[1.7, 3.9, 0]} rotation={0.35} scale={0.9} hl={hl} />
+        <Mitochondrion position={[-2.0, 3.4, 0]} rotation={1.1} scale={0.8} hl={hl} />
+        <Mitochondrion position={[-4.0, -1.2, 0]} rotation={-0.4} scale={0.8} hl={hl} />
+        <Mitochondrion position={[-1.4, -2.2, 0]} rotation={0.5} scale={0.7} hl={hl} />
+        <Mitochondrion position={[1.0, -3.3, 0]} rotation={0.15} scale={0.8} hl={hl} />
       </group>
     </Selectable>
   );
 }
 
-/* ---------- Lysosomes: ringed yellow/red beads ---------- */
-function Lysosome({ position, core, ring, hl, scale = 1 }) {
-  return (
-    <group position={position} scale={scale}>
-      <mesh userData={{ structureId: 'lysosome' }} scale={[1, 1, 0.55]}>
-        <sphereGeometry args={[0.32, 24, 18]} />
-        {glossy(core, hl, { roughness: 0.12 })}
-      </mesh>
-      <mesh userData={{ structureId: 'lysosome' }}>
-        <torusGeometry args={[0.34, 0.09, 12, 32]} />
-        {glossy(ring, hl, { roughness: 0.12 })}
-      </mesh>
-    </group>
-  );
-}
-
+/* ---------- Lysosomes: small glossy yellow/red beads ---------- */
 function Lysosomes({ hovered, flash, onSelect, onHover }) {
   const hl = useHighlight('lysosome', hovered, flash);
+  const beads = [
+    { position: [-3.4, 2.9, 0], color: '#e33d24', scale: 1 },
+    { position: [0.9, -4.2, 0], color: '#f4c430', scale: 1 },
+    { position: [-2.8, -3.2, 0], color: '#f4c430', scale: 0.85 },
+    { position: [2.3, -2.3, 0], color: '#e33d24', scale: 0.85 },
+    { position: [2.6, 2.4, 0], color: '#f4c430', scale: 0.8 },
+  ];
   return (
     <Selectable id="lysosome" onSelect={onSelect} onHover={onHover}>
       <group position={[0, 0, FACE_Z + 0.2]}>
-        <Lysosome position={[-4.0, 2.0, 0]} core="#e33d24" ring="#f4c430" hl={hl} />
-        <Lysosome position={[-3.0, 3.2, 0]} core="#f0641e" ring="#f0641e" hl={hl} scale={0.8} />
-        <Lysosome position={[0.9, -4.2, 0]} core="#f4c430" ring="#f4c430" hl={hl} />
-        <Lysosome position={[2.4, -3.9, 0]} core="#e33d24" ring="#f4c430" hl={hl} scale={0.85} />
-        <Lysosome position={[-4.2, -1.6, 0]} core="#f0641e" ring="#f4c430" hl={hl} scale={0.75} />
+        {beads.map((b, i) => (
+          <mesh
+            key={i}
+            userData={{ structureId: 'lysosome' }}
+            position={b.position}
+            scale={b.scale}
+          >
+            <sphereGeometry args={[0.34, 24, 18]} />
+            {glossy(b.color, hl, { roughness: 0.1 })}
+          </mesh>
+        ))}
       </group>
     </Selectable>
   );
@@ -480,30 +449,24 @@ function FreeRibosomes({ hovered, flash, onSelect, onHover }) {
       seed.v = (seed.v * 16807) % 2147483647;
       return seed.v / 2147483647;
     };
-    // dense cluster lower-left of the nucleus, like the photo
     let attempts = 0;
-    while (list.length < 18 && attempts < 300) {
-      attempts++;
-      const x = -2.6 + rand() * 1.9;
-      const y = -2.6 + rand() * 1.9;
-      if (x * x + y * y < DISC_RADIUS * DISC_RADIUS * 0.8) list.push([x, y, 0]);
-    }
-    // sparse scatter elsewhere
-    attempts = 0;
-    while (list.length < 40 && attempts < 600) {
+    while (list.length < 34 && attempts < 900) {
       attempts++;
       const a = rand() * Math.PI * 2;
-      const r = 1.5 + rand() * 3.1;
+      const r = 1.3 + rand() * 3.3;
       const x = Math.cos(a) * r;
       const y = Math.sin(a) * r;
       const clearOf = (cx, cy, d) => (x - cx) ** 2 + (y - cy) ** 2 > d * d;
       if (
-        clearOf(0.1, -0.7, 2.1) && // nucleus
-        clearOf(2.8, 0.6, 1.4) && // rough ER band
-        clearOf(-0.3, 2.3, 1.9) && // golgi
-        clearOf(-1.7, 3.1, 1.0) &&
-        clearOf(-3.6, 1.0, 1.0) &&
-        clearOf(1.6, 4.0, 1.0) // mitochondria
+        clearOf(0, 0.1, 2.1) && // nucleus
+        clearOf(-2.9, 1.0, 1.7) && // rough ER maze
+        clearOf(2.9, 0.6, 1.4) && // smooth ER band
+        clearOf(-0.4, 2.7, 1.9) && // golgi
+        clearOf(1.7, 3.9, 1.1) &&
+        clearOf(-2.0, 3.4, 1.0) &&
+        clearOf(-4.0, -1.2, 1.0) &&
+        clearOf(-1.4, -2.2, 0.9) &&
+        clearOf(1.0, -3.3, 1.0) // mitochondria
       ) {
         list.push([x, y, 0]);
       }
