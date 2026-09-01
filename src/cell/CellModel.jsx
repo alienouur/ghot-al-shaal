@@ -400,7 +400,7 @@ function Mitochondria({ hovered, flash, onSelect, onHover }) {
   return (
     <Selectable id="mitochondria" onSelect={onSelect} onHover={onHover}>
       <group position={[0, 0, FACE_Z + 0.22]}>
-        <Mitochondrion position={[1.7, 3.9, 0]} rotation={0.35} scale={0.9} hl={hl} />
+        <Mitochondrion position={[1.4, 3.5, 0]} rotation={0.35} scale={0.9} hl={hl} />
         <Mitochondrion position={[-2.0, 3.4, 0]} rotation={1.1} scale={0.8} hl={hl} />
         <Mitochondrion position={[-4.0, -1.2, 0]} rotation={-0.4} scale={0.8} hl={hl} />
         <Mitochondrion position={[-1.4, -2.2, 0]} rotation={0.5} scale={0.7} hl={hl} />
@@ -417,8 +417,8 @@ function Lysosomes({ hovered, flash, onSelect, onHover }) {
     { position: [-3.4, 2.9, 0], color: '#e33d24', scale: 1 },
     { position: [0.9, -4.2, 0], color: '#f4c430', scale: 1 },
     { position: [-2.8, -3.2, 0], color: '#f4c430', scale: 0.85 },
-    { position: [2.3, -2.3, 0], color: '#e33d24', scale: 0.85 },
-    { position: [2.6, 2.4, 0], color: '#f4c430', scale: 0.8 },
+    { position: [-0.3, -3.4, 0], color: '#e33d24', scale: 0.85 },
+    { position: [1.9, 1.6, 0], color: '#f4c430', scale: 0.8 },
   ];
   return (
     <Selectable id="lysosome" onSelect={onSelect} onHover={onHover}>
@@ -461,8 +461,10 @@ function FreeRibosomes({ hovered, flash, onSelect, onHover }) {
         clearOf(0, 0.1, 2.1) && // nucleus
         clearOf(-2.9, 1.0, 1.7) && // rough ER maze
         clearOf(2.9, 0.6, 1.4) && // smooth ER band
+        clearOf(2.2, -1.6, 1.0) && // smooth ER lower trunk
+        clearOf(2.5, -3.0, 1.0) && // smooth ER droop
         clearOf(-0.4, 2.7, 1.9) && // golgi
-        clearOf(1.7, 3.9, 1.1) &&
+        clearOf(1.4, 3.5, 1.1) &&
         clearOf(-2.0, 3.4, 1.0) &&
         clearOf(-4.0, -1.2, 1.0) &&
         clearOf(-1.4, -2.2, 0.9) &&
