@@ -4,7 +4,7 @@ import { Suspense, useRef } from 'react';
 import * as THREE from 'three';
 import CellModel from './CellModel';
 
-const DEFAULT_POS = new THREE.Vector3(0, 0.5, 12);
+const DEFAULT_POS = new THREE.Vector3(0, 0.3, 14);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
 function CameraRig({ resetSignal, controlsRef }) {
