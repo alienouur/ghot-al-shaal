@@ -38,7 +38,7 @@ function pickProps(editor, unit) {
   };
 }
 
-function Selectable({ id, onSelect, onHover, children }) {
+function Selectable({ id, onSelect, onHover, editor, children }) {
   const handleClick = useCallback(
     (e) => {
       e.stopPropagation();
@@ -58,6 +58,10 @@ function Selectable({ id, onSelect, onHover, children }) {
     onHover(null);
     document.body.style.cursor = 'auto';
   }, [onHover]);
+  // in editor mode, hover/click handlers would stopPropagation and block drags
+  if (editor) {
+    return <group userData={{ structureId: id }}>{children}</group>;
+  }
   return (
     <group
       onClick={handleClick}
@@ -143,10 +147,10 @@ function Disc() {
 }
 
 /* ---------- Plasma membrane: thin teal rim ---------- */
-function PlasmaMembrane({ hovered, flash, onSelect, onHover }) {
+function PlasmaMembrane({ hovered, flash, onSelect, onHover, editor }) {
   const hl = useHighlight('plasma_membrane', hovered, flash);
   return (
-    <Selectable id="plasma_membrane" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="plasma_membrane" onSelect={onSelect} onHover={onHover} editor={editor}>
       <mesh userData={{ structureId: 'plasma_membrane' }}>
         <torusGeometry args={[DISC_RADIUS, 0.24, 20, 128]} />
         {glossy('#5fc7b4', hl)}
@@ -182,7 +186,7 @@ function Nucleus({ hovered, flash, onSelect, onHover, layout, editor }) {
     return list;
   }, []);
   return (
-    <Selectable id="nucleus" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="nucleus" onSelect={onSelect} onHover={onHover} editor={editor}>
       {/* raised dome in the center; window faces the viewer slightly right */}
       <group
         position={[u.x, u.y, FACE_Z + 0.9]}
@@ -256,7 +260,7 @@ function RoughER({ hovered, flash, onSelect, onHover, layout, editor }) {
   const hl = useHighlight('rough_er', hovered, flash) || editor?.selected === 'rough_er';
   const curves = useMemo(() => ROUGH_ER_CURVES.map(makeCurve), []);
   return (
-    <Selectable id="rough_er" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="rough_er" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group
         position={[u.x, u.y, FACE_Z + 0.18]}
         scale={u.s}
@@ -289,7 +293,7 @@ function BoundRibosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
     return list;
   }, []);
   return (
-    <Selectable id="bound_ribosomes" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="bound_ribosomes" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group
         position={[u.x, u.y, FACE_Z + 0.18]}
         scale={u.s}
@@ -347,7 +351,7 @@ function SmoothER({ hovered, flash, onSelect, onHover, layout, editor }) {
     []
   );
   return (
-    <Selectable id="smooth_er" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="smooth_er" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group
         position={[u.x, u.y, FACE_Z + 0.16]}
         scale={u.s}
@@ -373,7 +377,7 @@ function Golgi({ hovered, flash, onSelect, onHover, layout, editor }) {
     [-1.1, 0.9, 0], [1.2, 1.0, 0], [-1.5, -0.3, 0], [1.6, -0.2, 0], [0.1, 1.35, 0],
   ];
   return (
-    <Selectable id="golgi_complex" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="golgi_complex" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group
         position={[u.x, u.y, FACE_Z + 0.16]}
         scale={u.s}
@@ -449,7 +453,7 @@ const MITO_BASE = [
 function Mitochondria({ hovered, flash, onSelect, onHover, layout, editor }) {
   const hl = useHighlight('mitochondria', hovered, flash);
   return (
-    <Selectable id="mitochondria" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="mitochondria" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group position={[0, 0, FACE_Z + 0.22]}>
         {MITO_BASE.map((b, i) => {
           const u = layout[`mito_${i}`];
@@ -482,7 +486,7 @@ const LYSO_BASE = [
 function Lysosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
   const hl = useHighlight('lysosome', hovered, flash);
   return (
-    <Selectable id="lysosome" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="lysosome" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group position={[0, 0, FACE_Z + 0.2]}>
         {LYSO_BASE.map((b, i) => {
           const u = layout[`lyso_${i}`];
@@ -499,6 +503,77 @@ function Lysosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
             </mesh>
           );
         })}
+      </group>
+    </Selectable>
+  );
+}
+
+/* ---------- Microfilaments: bundle of thin wavy actin threads ---------- */
+const MICROFILAMENT_CURVES = [
+  [[-1.1, -0.12, 0], [-0.5, 0.08, 0.03], [0.1, -0.1, 0], [0.7, 0.1, 0.03], [1.1, -0.05, 0]],
+  [[-1.05, 0.1, 0], [-0.45, 0.28, 0.03], [0.15, 0.1, 0], [0.72, 0.3, 0.03], [1.05, 0.16, 0]],
+  [[-1.0, -0.32, 0], [-0.4, -0.15, 0.03], [0.2, -0.34, 0], [0.75, -0.14, 0.03], [1.0, -0.28, 0]],
+];
+
+function Microfilaments({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.microfilament;
+  const hl =
+    useHighlight('microfilament', hovered, flash) ||
+    editor?.selected === 'microfilament';
+  const curves = useMemo(() => MICROFILAMENT_CURVES.map(makeCurve), []);
+  return (
+    <Selectable id="microfilament" onSelect={onSelect} onHover={onHover} editor={editor}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.18]}
+        scale={u.s}
+        rotation={[0, 0, 1.25]}
+        {...pickProps(editor, 'microfilament')}
+      >
+        {curves.map((c, i) => (
+          <TubeMesh key={i} curve={c} radius={0.055} color="#b06ae0" hl={hl} id="microfilament" segments={40} />
+        ))}
+        {/* wider invisible hit target along the bundle */}
+        <mesh userData={{ structureId: 'microfilament' }} visible={false} rotation={[0, 0, 0]}>
+          <boxGeometry args={[2.3, 0.8, 0.3]} />
+        </mesh>
+      </group>
+    </Selectable>
+  );
+}
+
+/* ---------- Microtubules: green hollow straight tubes ---------- */
+function Microtubules({ hovered, flash, onSelect, onHover, layout, editor }) {
+  const u = layout.microtubule;
+  const hl =
+    useHighlight('microtubule', hovered, flash) || editor?.selected === 'microtubule';
+  return (
+    <Selectable id="microtubule" onSelect={onSelect} onHover={onHover} editor={editor}>
+      <group
+        position={[u.x, u.y, FACE_Z + 0.2]}
+        scale={u.s}
+        rotation={[0, 0, -0.12]}
+        {...pickProps(editor, 'microtubule')}
+      >
+        {[0.19, -0.19].map((y, i) => (
+          <group key={i} position={[i === 0 ? -0.15 : 0.15, y, 0]}>
+            <mesh userData={{ structureId: 'microtubule' }} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.13, 0.13, 2.3, 16]} />
+              {glossy('#3fae4a', hl, { roughness: 0.18 })}
+            </mesh>
+            {/* darker end rings to suggest the hollow tube */}
+            {[-1.15, 1.15].map((x) => (
+              <mesh
+                key={x}
+                userData={{ structureId: 'microtubule' }}
+                position={[x, 0, 0]}
+                rotation={[0, Math.PI / 2, 0]}
+              >
+                <torusGeometry args={[0.1, 0.035, 10, 20]} />
+                {glossy('#1d5c27', hl)}
+              </mesh>
+            ))}
+          </group>
+        ))}
       </group>
     </Selectable>
   );
@@ -535,8 +610,10 @@ function FreeRibosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
         clearOf(1.4, 3.5, 1.1) &&
         clearOf(-2.0, 3.4, 1.0) &&
         clearOf(-4.0, -1.2, 1.0) &&
-        clearOf(-1.4, -2.2, 0.9) &&
-        clearOf(1.0, -3.3, 1.0) // mitochondria
+        clearOf(-1.6, -1.85, 0.9) &&
+        clearOf(1.6, -3.5, 1.0) && // mitochondria
+        clearOf(1.65, 0.3, 1.3) && // microfilaments
+        clearOf(-0.2, -2.8, 1.5) // microtubules
       ) {
         list.push([x, y, 0]);
       }
@@ -544,7 +621,7 @@ function FreeRibosomes({ hovered, flash, onSelect, onHover, layout, editor }) {
     return list;
   }, []);
   return (
-    <Selectable id="free_ribosomes" onSelect={onSelect} onHover={onHover}>
+    <Selectable id="free_ribosomes" onSelect={onSelect} onHover={onHover} editor={editor}>
       <group
         position={[u.x, u.y, FACE_Z + 0.12]}
         scale={u.s}
@@ -603,6 +680,8 @@ export default function CellModel({
       <SmoothER {...common} />
       <Golgi {...common} />
       <Lysosomes {...common} />
+      <Microfilaments {...common} />
+      <Microtubules {...common} />
       <FreeRibosomes {...common} />
     </group>
   );

@@ -44,6 +44,16 @@ export const STRUCTURES = [
     name: 'Lysosome',
     description: 'Contains enzymes that break down cellular materials.',
   },
+  {
+    id: 'microfilament',
+    name: 'Microfilaments',
+    description: 'Thin actin fibers that support cell shape and enable movement.',
+  },
+  {
+    id: 'microtubule',
+    name: 'Microtubules',
+    description: 'Hollow protein tubes that maintain cell shape and serve as tracks for transport.',
+  },
 ];
 
 export const STRUCTURE_MAP = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));

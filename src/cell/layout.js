@@ -10,13 +10,15 @@ export const DEFAULT_LAYOUT = {
   mito_0: { x: 1.4, y: 3.5, s: 1 },
   mito_1: { x: -2.0, y: 3.4, s: 1 },
   mito_2: { x: -4.0, y: -1.2, s: 1 },
-  mito_3: { x: -1.4, y: -2.2, s: 1 },
-  mito_4: { x: 1.0, y: -3.3, s: 1 },
+  mito_3: { x: -1.6, y: -1.85, s: 1 },
+  mito_4: { x: 1.6, y: -3.5, s: 1 },
   lyso_0: { x: -3.4, y: 2.9, s: 1 },
-  lyso_1: { x: 0.9, y: -4.2, s: 1 },
+  lyso_1: { x: 0.6, y: -4.3, s: 1 },
   lyso_2: { x: -2.8, y: -3.2, s: 1 },
-  lyso_3: { x: -0.3, y: -3.4, s: 1 },
-  lyso_4: { x: 1.9, y: 1.6, s: 1 },
+  lyso_3: { x: -1.9, y: -4.05, s: 1 },
+  lyso_4: { x: 0.95, y: 1.95, s: 1 },
+  microfilament: { x: 1.65, y: 0.3, s: 1 },
+  microtubule: { x: -0.2, y: -2.8, s: 1 },
 };
 
 export const UNIT_LABELS = {
@@ -35,6 +37,8 @@ export const UNIT_LABELS = {
   lyso_2: 'Lysosome 3',
   lyso_3: 'Lysosome 4',
   lyso_4: 'Lysosome 5',
+  microfilament: 'Microfilaments',
+  microtubule: 'Microtubules',
 };
 
 const KEY = 'cell_anatomy_layout_v1';
