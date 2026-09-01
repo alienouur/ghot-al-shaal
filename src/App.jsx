@@ -4,7 +4,7 @@ import { STRUCTURE_MAP, generateQuestions, questionText } from './data/structure
 import { LeaderboardStorage } from './storage/LeaderboardStorage';
 import { Sound } from './game/sound';
 import CellScene from './cell/CellScene';
-import { loadLayout } from './cell/layout';
+import { loadLayout, fetchRemoteLayout } from './cell/layout';
 import StartScreen from './screens/StartScreen';
 import EditorScreen from './screens/EditorScreen';
 import ResultsScreen from './screens/ResultsScreen';
@@ -45,6 +45,17 @@ export default function App() {
   const answeredRef = useRef(false);
   const startTimeRef = useRef(0);
   const hasWebGL = useMemo(() => webglAvailable(), []);
+
+  // load shared layout from the server so everyone sees the saved arrangement
+  useEffect(() => {
+    let cancelled = false;
+    fetchRemoteLayout().then((remote) => {
+      if (remote && !cancelled) setLayout(remote);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleMute = () => {
     setMuted((m) => {

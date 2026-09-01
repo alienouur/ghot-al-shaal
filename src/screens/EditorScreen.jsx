@@ -1,10 +1,31 @@
 import { useCallback, useState } from 'react';
 import CellScene from '../cell/CellScene';
-import { UNIT_LABELS, DEFAULT_LAYOUT, saveLayout, resetLayout } from '../cell/layout';
+import {
+  UNIT_LABELS,
+  DEFAULT_LAYOUT,
+  saveLayout,
+  resetLayout,
+  saveRemoteLayout,
+  verifyPassword,
+} from '../cell/layout';
 
 export default function EditorScreen({ layout, onLayoutChange, onBack }) {
   const [selected, setSelected] = useState(null);
   const [savedMsg, setSavedMsg] = useState('');
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [checking, setChecking] = useState(false);
+
+  const unlock = async () => {
+    if (!password) return;
+    setChecking(true);
+    setAuthError('');
+    const ok = await verifyPassword(password);
+    setChecking(false);
+    if (ok) setUnlocked(true);
+    else setAuthError('Wrong password / كلمة السر غير صحيحة');
+  };
 
   const onMoveUnit = useCallback(
     (unit, x, y) => {
@@ -25,9 +46,13 @@ export default function EditorScreen({ layout, onLayoutChange, onBack }) {
     setSavedMsg('');
   };
 
-  const save = () => {
-    const ok = saveLayout(layout);
-    setSavedMsg(ok ? 'Layout saved ✓' : 'Could not save (storage unavailable)');
+  const save = async () => {
+    setSavedMsg('Saving…');
+    saveLayout(layout);
+    const ok = await saveRemoteLayout(layout, password);
+    setSavedMsg(
+      ok ? 'Layout saved for everyone ✓' : 'Could not save to server — try again'
+    );
   };
 
   const resetSelected = () => {
@@ -36,11 +61,53 @@ export default function EditorScreen({ layout, onLayoutChange, onBack }) {
     setSavedMsg('');
   };
 
-  const resetAll = () => {
-    onLayoutChange(() => resetLayout());
+  const resetAll = async () => {
+    const defaults = resetLayout();
+    onLayoutChange(() => defaults);
     setSelected(null);
-    setSavedMsg('Layout reset to default');
+    setSavedMsg('Saving…');
+    const ok = await saveRemoteLayout(defaults, password);
+    setSavedMsg(ok ? 'Layout reset to default ✓' : 'Could not save to server — try again');
   };
+
+  if (!unlocked) {
+    return (
+      <div className="screen start-screen">
+        <div className="panel">
+          <h2 className="subtitle">Model Editor</h2>
+          <label className="name-label" htmlFor="editor-password">
+            Enter password / أدخل كلمة السر:
+          </label>
+          <input
+            id="editor-password"
+            className="name-input"
+            type="password"
+            value={password}
+            placeholder="Password"
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setAuthError('');
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && unlock()}
+            autoComplete="off"
+          />
+          {authError && (
+            <p className="error-text" role="alert">
+              {authError}
+            </p>
+          )}
+          <div className="editor-actions">
+            <button className="big-btn" disabled={!password || checking} onClick={unlock}>
+              {checking ? 'CHECKING…' : 'ENTER'}
+            </button>
+            <button className="big-btn secondary" onClick={onBack}>
+              BACK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="editor-screen">

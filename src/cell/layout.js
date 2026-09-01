@@ -43,6 +43,76 @@ export const UNIT_LABELS = {
 
 const KEY = 'cell_anatomy_layout_v1';
 
+export const LAYOUT_API = 'https://textdb.online';
+const REMOTE_KEY = 'cellanatomy_ghot_layout_v1_x7k2q9';
+const PASS_HASH =
+  'ce8457d59078a699acb70416f88155a96a906b7b7aad43708402e3a3bcc8a4b4';
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(text)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function sanitize(saved) {
+  const merged = {};
+  for (const k of Object.keys(DEFAULT_LAYOUT)) {
+    const v = saved && saved[k];
+    merged[k] =
+      v && Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.s)
+        ? { x: v.x, y: v.y, s: v.s }
+        : { ...DEFAULT_LAYOUT[k] };
+  }
+  return merged;
+}
+
+export async function fetchRemoteLayout() {
+  try {
+    const res = await fetch(`${LAYOUT_API}/${REMOTE_KEY}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text) return null;
+    const data = JSON.parse(text);
+    if (!data || typeof data !== 'object') return null;
+    return sanitize(data);
+  } catch {
+    return null;
+  }
+}
+
+export async function verifyPassword(password) {
+  try {
+    return (await sha256Hex(password)) === PASS_HASH;
+  } catch {
+    return false;
+  }
+}
+
+export async function saveRemoteLayout(layout, password) {
+  try {
+    if (!(await verifyPassword(password))) return false;
+    const body = new URLSearchParams({
+      key: REMOTE_KEY,
+      value: JSON.stringify(layout),
+    });
+    const res = await fetch(`${LAYOUT_API}/update`, {
+      method: 'POST',
+      body,
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data && data.status === 1;
+  } catch {
+    return false;
+  }
+}
+
 export function loadLayout() {
   try {
     const raw = localStorage.getItem(KEY);
